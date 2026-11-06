@@ -1,0 +1,201 @@
+const announcements = [
+  {
+    title: "First Quarter Examination Schedule",
+    category: "Academic",
+    date: "2026-11-05",
+    content:
+      "First quarter examinations will take place from November 16 to 20. Students should review the schedule posted by their class advisers."
+  },
+  {
+    title: "Science and Technology Fair",
+    category: "Event",
+    date: "2026-11-03",
+    content:
+      "Students and parents are invited to visit the annual Science and Technology Fair in the school gymnasium on November 12."
+  },
+  {
+    title: "Temporary Library Closure",
+    category: "Urgent",
+    date: "2026-11-02",
+    content:
+      "The school library will be closed on November 9 for maintenance. Borrowed books due that day may be returned on November 10."
+  },
+  {
+    title: "Student Identification Cards",
+    category: "General",
+    date: "2026-10-30",
+    content:
+      "New student identification cards are available at the registrar's office. Please bring your previous card or registration form."
+  },
+  {
+    title: "Parent-Teacher Conference",
+    category: "Event",
+    date: "2026-10-28",
+    content:
+      "The conference will be held on November 18. Parents should coordinate with class advisers for their assigned meeting time."
+  },
+  {
+    title: "Scholarship Application Period",
+    category: "Academic",
+    date: "2026-10-25",
+    content:
+      "Applications for the next semester's scholarship program are open until November 30. Forms are available in the guidance office."
+  }
+];
+
+const announcementGrid = document.querySelector("#announcementGrid");
+const announcementCount = document.querySelector("#announcementCount");
+const emptyMessage = document.querySelector("#emptyMessage");
+
+const searchInput = document.querySelector("#searchInput");
+const categoryFilter = document.querySelector("#categoryFilter");
+
+const modal = document.querySelector("#announcementModal");
+const openFormButton = document.querySelector("#openFormButton");
+const announcementForm = document.querySelector("#announcementForm");
+const titleInput = document.querySelector("#titleInput");
+
+const menuButton = document.querySelector("#menuButton");
+const navigationLinks = document.querySelector("#navigationLinks");
+
+function escapeHTML(value) {
+  const element = document.createElement("div");
+  element.textContent = value;
+  return element.innerHTML;
+}
+
+function formatDate(dateString) {
+  const date = new Date(`${dateString}T00:00:00`);
+
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+  }).format(date);
+}
+
+function getCategoryClass(category) {
+  return category.toLowerCase();
+}
+
+function renderAnnouncements() {
+  const searchTerm = searchInput.value.trim().toLowerCase();
+  const selectedCategory = categoryFilter.value;
+
+  const filteredAnnouncements = announcements.filter((announcement) => {
+    const searchableText =
+      `${announcement.title} ${announcement.content}`.toLowerCase();
+
+    const matchesSearch = searchableText.includes(searchTerm);
+
+    const matchesCategory =
+      selectedCategory === "all" ||
+      announcement.category === selectedCategory;
+
+    return matchesSearch && matchesCategory;
+  });
+
+  announcementGrid.innerHTML = filteredAnnouncements
+    .map((announcement) => {
+      const safeTitle = escapeHTML(announcement.title);
+      const safeContent = escapeHTML(announcement.content);
+      const safeCategory = escapeHTML(announcement.category);
+
+      return `
+        <article class="announcement-card">
+          <div class="card-meta">
+            <span class="category ${getCategoryClass(announcement.category)}">
+              ${safeCategory}
+            </span>
+
+            <time datetime="${announcement.date}">
+              ${formatDate(announcement.date)}
+            </time>
+          </div>
+
+          <h3>${safeTitle}</h3>
+          <p>${safeContent}</p>
+        </article>
+      `;
+    })
+    .join("");
+
+  announcementCount.textContent = announcements.length;
+  emptyMessage.hidden = filteredAnnouncements.length !== 0;
+}
+
+function openModal() {
+  modal.hidden = false;
+  document.body.classList.add("modal-open");
+  titleInput.focus();
+}
+
+function closeModal() {
+  modal.hidden = true;
+  document.body.classList.remove("modal-open");
+  announcementForm.reset();
+  openFormButton.focus();
+}
+
+openFormButton.addEventListener("click", openModal);
+
+document.querySelectorAll("[data-close-modal]").forEach((button) => {
+  button.addEventListener("click", closeModal);
+});
+
+announcementForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+
+  const formData = new FormData(announcementForm);
+
+  const newAnnouncement = {
+    title: formData.get("title").trim(),
+    category: formData.get("category"),
+    content: formData.get("content").trim(),
+    date: new Date().toISOString().split("T")[0]
+  };
+
+  announcements.unshift(newAnnouncement);
+
+  searchInput.value = "";
+  categoryFilter.value = "all";
+
+  renderAnnouncements();
+  closeModal();
+
+  document
+    .querySelector("#announcements")
+    .scrollIntoView({ behavior: "smooth" });
+});
+
+searchInput.addEventListener("input", renderAnnouncements);
+categoryFilter.addEventListener("change", renderAnnouncements);
+
+menuButton.addEventListener("click", () => {
+  const isOpen = navigationLinks.classList.toggle("open");
+
+  menuButton.setAttribute("aria-expanded", String(isOpen));
+  menuButton.setAttribute(
+    "aria-label",
+    isOpen ? "Close navigation" : "Open navigation"
+  );
+});
+
+navigationLinks.querySelectorAll("a").forEach((link) => {
+  link.addEventListener("click", () => {
+    navigationLinks.classList.remove("open");
+    menuButton.setAttribute("aria-expanded", "false");
+    menuButton.setAttribute("aria-label", "Open navigation");
+  });
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !modal.hidden) {
+    closeModal();
+  }
+});
+
+document.querySelector("#currentYear").textContent =
+  new Date().getFullYear();
+
+renderAnnouncements();
